@@ -50,4 +50,5 @@ body:
     id: contribution
     attributes:
       label: Would you be interested in contributing?
-      options: []
+      description: Let us know if you would like to help build this integration.
+      placeholder: Share how you would like to contribute.
