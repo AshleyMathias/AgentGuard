@@ -34,13 +34,15 @@ body:
       placeholder: Share documentation or relevant technical details.
 
   - type: dropdown
-    id: research
+    id: environment
     attributes:
-      label: Have you explored this integration?
+      label: Which environment are you using?
+      description: Select your development environment.
       options:
-        - Yes, I have tested it.
-        - I have researched the available capabilities.
-        - I have an idea but haven't investigated yet.
+        - Windows
+        - macOS
+        - Linux
+        - Other
     validations:
       required: true
 
