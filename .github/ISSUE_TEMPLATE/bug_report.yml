@@ -1,0 +1,74 @@
+name: Bug Report
+description: Report something that isn't working as expected.
+title: "[Bug]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping improve AgentGuard!
+        Please provide as much detail as possible.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Describe the problem
+      description: What happened?
+      placeholder: Explain the issue...
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: How can someone reproduce this issue?
+      placeholder: |
+        1. Configure...
+        2. Start...
+        3. Observe...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behaviour
+      placeholder: What should have happened?
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behaviour
+      placeholder: What happened instead?
+    validations:
+      required: true
+
+  - type: input
+    id: agent
+    attributes:
+      label: AI coding agent
+      placeholder: Mistral Vibe, Claude Code, etc.
+
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      placeholder: OS, tool version, shell, etc.
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Error messages or logs
+      description: Remove secrets and sensitive information before sharing.
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I have checked existing issues.
+          required: true
+        - label: I have removed sensitive information.
+          required: true
