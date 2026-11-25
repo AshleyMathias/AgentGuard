@@ -63,12 +63,11 @@ body:
       label: Error messages or logs
       description: Remove secrets and sensitive information before sharing.
 
-  - type: checkboxes
-    id: checks
+   - type: checkboxes
+    id: contribution
     attributes:
-      label: Before submitting
+      label: Contribution
       options:
-        - label: I have checked existing issues.
-          required: true
-        - label: I have removed sensitive information.
-          required: true
+        - label: I would be interested in helping implement this integration.
+        - label: I can help test the integration.
+        - label: I can help document the integration.
