@@ -1,0 +1,224 @@
+================================================================
+COMPLIANCE-AWARE CODING AGENTS
+A setup guide and commentary for Vibe and other agentic coding tools
+================================================================
+
+THE IDEA
+----------------------------------------------------------------
+
+AI coding agents are stateless lawyers: whatever is not in their
+context right now does not exist. Teams respond by pasting rules
+documents into the chat, and the agent follows them for about ten
+turns -- until the session compacts, or a new session starts, or
+the rules simply drift out of attention. Then it writes code the
+compliance team would never approve.
+
+The fix is architectural, not rhetorical: make the rules a FOLDER
+CONVENTION on disk instead of a message in the chat. Then wire the
+tool's own loading mechanisms to force those rules back into the
+agent's context at the moments it matters:
+
+  - when a session starts,
+  - before any development output,
+  - after every file edit.
+
+The agent never has to be told these files exist. It has to be
+given paths the APPLICATION is already programmed to read.
+
+
+HOW IT WORKS IN VIBE
+----------------------------------------------------------------
+
+The complete setup is four pieces in any project root:
+
+  AGENTS.md
+      Project instructions. Vibe loads this file automatically
+      into every session's context. It contains the workflow:
+      "when the user provides a rules document and says 'follow
+      this', save it verbatim into compliance/ first; before any
+      dev output, re-read the applicable rulesets; end every
+      answer with a Compliance check section; on conflicting
+      rules, ask the user -- never choose silently."
+
+  compliance/
+      All *.md files here are ACTIVE rulesets. There is nothing
+      to register: any file dropped in becomes law on the next
+      session start. Moving it out retires it. README.md inside
+      documents the convention.
+
+  .vibe/hooks.toml
+      Two hooks. Hook 1 (type session_start) runs a script when
+      the session opens; it collects every compliance/*.md file
+      and injects them straight into the model's context. If the
+      combined size is too large, it injects the file list and an
+      instruction to read them. Hook 2 (type post_tool, matched
+      to file writes and edits) appends a one-line nudge after
+      every change: verify this against the rules before you
+      answer.
+
+  .vibe/hooks/*.sh
+      The scripts. Pure bash, no dependencies, JSON-escaped
+      output, tested against quotes, backslashes, tabs, CRLF and
+      large files.
+
+The enforcement chain, in one line:
+
+  rules doc -> "follow this" -> saved into compliance/
+  -> every session start: rules injected
+  -> before every output: agent re-reads and validates
+  -> after every edit: reminder to verify
+  -> every answer ends with: which rules it checked, and how
+
+
+PORTING TO OTHER TOOLS
+----------------------------------------------------------------
+
+The folder convention travels unchanged. What differs is the
+filename each tool scans for at startup, and whether it has hooks:
+
+  Vibe         AGENTS.md          hooks: YES (session_start, post_tool)
+  Claude Code  CLAUDE.md          hooks: YES, including a SessionStart
+                                  hook that injects context -- the whole
+                                  setup ports almost one-to-one
+  OpenCode     AGENTS.md          hooks: via plugins
+  Cursor       .cursor/rules/     hooks: none; use rules with
+               (also reads        "Always apply" -- reminder-level
+               AGENTS.md)         enforcement only
+  Antigravity  AGENTS.md          hooks: none currently
+
+Practical layout so every tool finds its own name:
+
+  AGENTS.md          <- source of truth
+  CLAUDE.md          <- one line importing AGENTS.md
+  compliance/        <- shared by all tools, identical everywhere
+  .vibe/hooks.toml   <- Vibe; Claude Code equivalent in settings
+
+You never describe these files to the tool. You place them where
+each tool is hardcoded to look, at startup, before your first
+message is even sent.
+
+
+MY TAKE
+----------------------------------------------------------------
+
+What is genuinely good here:
+
+- It removes the need for agent memory instead of asking for it.
+  Rules on disk survive sessions, teammates, refactors and model
+  changes. The chat is the weakest possible place for durable
+  constraints.
+- The activation ritual ("follow this" -> save to compliance/)
+  is the difference between a rules folder that is current and
+  one that is a graveyard of stale PDFs. Rules live where the
+  agent reads, or they do not exist.
+- The mandatory "Compliance check" section at the end of every
+  answer gives you an automatic audit trail. You can review the
+  agent's compliance reasoning the same way you review its code.
+
+Where I would stay honest:
+
+- Instructions-only tools (Cursor, Antigravity today) give you
+  reminders, not re-injection. Agents drift. For high-stakes
+  rules, prefer a tool with hooks, or add a lint/CI gate that
+  enforces the machine-checkable rules mechanically. An agent
+  reminder and a pipeline check measure different things; you
+  want the pipeline check for anything auditable.
+- Hooks run scripts. Keep them read-only with respect to your
+  code, version their source, and review them like any CI job.
+- This pattern covers "rules the agent must consult". It does
+  not replace secret scanning, dependency auditing or access
+  controls. It is the layer that makes the agent AWARE of the
+  rules; it does not make the SYSTEM compliant by itself.
+
+VERSIONING AND AUDIT
+----------------------------------------------------------------
+
+Rules that can change silently are not rules. The folder is
+therefore versioned:
+
+  compliance/active/      current rulesets -- what gets injected
+  compliance/superseded/  archived old versions, never deleted
+  compliance/VERSION      current rules version, one line (v1, v2, ...)
+  compliance/CHANGELOG.md append-only audit log of every change
+
+The lifecycle, run by the agent only when the user asks:
+
+  new doc -> old ruleset moved to superseded/<name>.vN.md
+          -> new ruleset saved into active/
+          -> VERSION bumped (+1, always)
+          -> CHANGELOG.md gains an entry (version, date, what
+             replaced what, why)
+
+In Vibe this is packaged as a user-invocable skill, /compliance:
+
+  /compliance update <doc>   set a new rule version (with the doc)
+  /compliance show           current version + active rulesets
+  /compliance history        the full audit log
+
+The changelog is append-only by instruction; superseded files are
+never deleted; version numbers only increase; if VERSION or the
+changelog is missing or unreadable, the agent reports it and
+proceeds conservatively rather than inventing audit history.
+
+For every dev deliverable, the Compliance check section now names
+the rules VERSION it was validated against -- so each output is
+traceable to a specific, dated ruleset.
+
+
+FAILURE BEHAVIOR -- WHAT HAPPENS WHEN THINGS GO WRONG
+----------------------------------------------------------------
+
+The hooks are designed to fail open with a visible signal, not to
+disable silently or block the session. Tested behavior:
+
+  - No compliance/ folder: hooks exit silently. With zero rules
+    there is nothing to inject, and the edit nudge stays quiet so
+    the session is not polluted.
+
+  - compliance/ exists but nothing readable (all files are
+    folders, permissions deny read, broken links): the hook
+    injects an explicit warning -- "no readable rulesets -- read
+    them directly and flag the problem to the user" -- so the
+    agent cannot mistake silence for "no rules apply."
+
+  - Some files readable, some not: the readable rules are
+    injected AND the skipped files are named in the context, so
+    the agent knows the ruleset is incomplete instead of
+    assuming it saw everything.
+
+  - Control characters / binary content in a rules file: stripped
+    before JSON encoding, so the hook can never emit a payload
+    that breaks the session. Text content (including unicode)
+    survives intact.
+
+  - Hook crashes, bash missing, script deleted: Vibe applies
+    fail-open semantics -- it prints a warning in the session and
+    continues. in Vibe, session_start hooks cannot be strict, by
+    design. The backstop is the AGENTS.md instruction to re-read
+    the compliance folder before any dev output, which is plain
+    instructions and survives hook failure.
+
+  - Project folder not (yet) trusted: Vibe does not load project
+    hooks at all. AGENTS.md instructions still load, so the agent
+    is reminded of the workflow, but automatic injection needs
+    the trust prompt to be accepted once.
+
+The honest design principle: a hook that can silently disable
+rule-checking is worse than no hook, because it wears the costume
+of protection. Every non-happy path above either injects a
+warning into the agent's context or produces a visible session
+warning -- never a quiet no-op.
+
+Bottom line: the durable unit of agent governance is not the
+prompt. It is the folder on disk that every tool already knows
+how to look at, plus the smallest possible glue that guarantees
+the agent looks there before it speaks.
+
+================================================================
+Setup tested end-to-end: hook JSON escaping, empty-rules case,
+oversized-rules fallback, unreadable and binary-file handling,
+no-folder and trust behavior, active/superseded separation,
+version injection, legacy flat-layout compatibility, TOML
+validity. Copy AGENTS.md, compliance/ and .vibe/ into a project,
+trust the folder, and say "follow this" -- the rest is automatic.
+================================================================
