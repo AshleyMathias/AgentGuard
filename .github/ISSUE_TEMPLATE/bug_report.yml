@@ -1,6 +1,7 @@
 name: Bug Report
 description: Report something that isn't working as expected.
 title: "[Bug]: "
+
 body:
   - type: markdown
     attributes:
@@ -63,11 +64,12 @@ body:
       label: Error messages or logs
       description: Remove secrets and sensitive information before sharing.
 
-   - type: checkboxes
-    id: contribution
+  - type: checkboxes
+    id: checks
     attributes:
-      label: Contribution
+      label: Before submitting
       options:
-        - label: I would be interested in helping implement this integration.
-        - label: I can help test the integration.
-        - label: I can help document the integration.
+        - label: I have checked existing issues.
+          required: true
+        - label: I have removed sensitive information.
+          required: true
