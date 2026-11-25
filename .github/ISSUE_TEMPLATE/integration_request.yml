@@ -1,0 +1,51 @@
+name: Integration Request
+description: Suggest support for another AI coding agent or development environment.
+title: "[Integration]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Help us make AgentGuard accessible across more AI coding environments.
+
+  - type: input
+    id: agent
+    attributes:
+      label: Which coding agent?
+      description: Name the tool you want AgentGuard to support.
+      placeholder: Claude Code, Cursor, GitHub Copilot, etc.
+    validations:
+      required: true
+
+  - type: textarea
+    id: usecase
+    attributes:
+      label: What would you like to achieve?
+      description: Explain how you envision AgentGuard working with this tool.
+    validations:
+      required: true
+
+  - type: textarea
+    id: capabilities
+    attributes:
+      label: Relevant integration capabilities
+      description: |
+        Does the tool support persistent instructions, lifecycle hooks,
+        or other mechanisms that could support this integration?
+      placeholder: Share documentation or relevant technical details.
+
+  - type: dropdown
+    id: research
+    attributes:
+      label: Have you explored this integration?
+      options:
+        - Yes, I have tested it.
+        - I have researched the available capabilities.
+        - I have an idea but haven't investigated yet.
+    validations:
+      required: true
+
+  - type: textarea
+    id: contribution
+    attributes:
+      label: Would you be interested in contributing?
+      options: []
