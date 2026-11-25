@@ -2,23 +2,34 @@
 
 ### Your coding agent should remember the rules of the project it's working on.
 
-A lightweight, version-controlled compliance instruction framework for AI coding agents.
+AgentGuard is a lightweight, version-controlled compliance instruction framework for AI coding agents.
 
-AgentGuard keeps project rules in files, loads them into agent sessions, and reminds agents to validate their changes against those rules.
+It helps keep important project rules available throughout development, even when conversations restart, context gets compacted, or multiple developers work on the same codebase.
 
-No external services. No database. Just files, native agent instructions and lifecycle hooks.
+Instead of relying entirely on an agent to remember instructions from previous conversations, AgentGuard stores them in files, loads them into agent sessions, and reminds agents to validate their changes.
 
-[Get Started](#-getting-started) · [How It Works](#-how-it-works) · [Contribute](#-contributing)
+**No external services. No database. No API keys. Just files, instructions and lifecycle hooks.**
+
+[Getting Started](#getting-started) · [How It Works](#how-it-works) · [Contributing](#contributing)
 
 ---
 
 ## The problem
 
-AI coding agents are great at following instructions. The problem is keeping those instructions relevant throughout a project.
+AI coding agents are becoming increasingly capable, but keeping them consistent across an entire project is still challenging.
 
-You give an agent a security policy, coding standard or architectural guideline. It follows it initially.
+Imagine giving an agent these instructions:
+
+- Never expose API keys or secrets.
+- Follow the project's architectural conventions.
+- Validate changes against security requirements.
+- Don't modify protected configurations.
+- Follow established coding standards.
+
+The agent follows them initially.
 
 Then:
+
 - A new session starts.
 - The conversation gets longer.
 - Context gets compacted.
@@ -26,101 +37,104 @@ Then:
 
 The instructions that mattered yesterday might not be present today.
 
-**AgentGuard takes a different approach: keep important project rules outside the conversation, in version-controlled files that the agent can access whenever it works.**
+**AgentGuard addresses this problem by keeping important project rules outside the conversation, in version-controlled files that can be loaded whenever the agent works.**
 
-## What AgentGuard does
+---
 
-| Capability | What it means |
-|---|---|
-| Persistent rules | Store project rules as files instead of relying on chat history. |
-| Session context | Inject active rules when a supported agent session starts. |
-| Change reminders | Remind the agent to validate file edits against applicable rules. |
-| Version control | Maintain a version number for the active rulesets. |
-| Rule history | Archive superseded rules and maintain a change log. |
-| User-controlled updates | Rules change only when the user explicitly requests an update. |
-
-## How it works
+## How AgentGuard works
 
 AgentGuard uses three main components:
 
-**1. AGENTS.md — Instructions**
+**1. Persistent instructions**
 
-Defines how the coding agent should work with project rules.
+`AGENTS.md` provides the agent with project-level instructions about how to work with compliance rules.
 
-It tells the agent when to save a new rules document, when to consult existing rules, and how to report its compliance checks.
+**2. Session-start hook**
 
-**2. compliance/ — Rules and version history**
+A Mistral Vibe lifecycle hook loads the active compliance rules into the agent's context when a session starts.
 
-A dedicated location for active rules, archived rules, version information and change history.
+**3. Post-edit reminder**
 
-**3. .vibe/ — Lifecycle hooks and skills**
+After relevant file-writing or editing operations, another hook reminds the agent to validate its changes against the applicable rules.
 
-Connects the rules folder to Mistral Vibe's lifecycle events.
+The intention is simple: make project rules available at the right moments in the development workflow.
 
-The session-start hook loads the active rules into the agent's context. The post-tool hook reminds the agent to validate changes after file edits.
-
-### The workflow
+## The workflow
 
 ```text
-       User provides a rules document
-                    |
-                    v
-             AgentGuard saves it
-                    |
-                    v
-             compliance/active/
-                    |
-                    v
-           Rules version updated
-                    |
-                    v
-          Agent session starts
-                    |
-                    v
-          Active rules are loaded
-                    |
-                    v
-          Agent works on the task
-                    |
-                    v
-          File edit reminder fires
-                    |
-                    v
-          Agent validates its work
-                    |
-                    v
-           Compliance check reported
+        Project Compliance Rules
+                  |
+                  v
+          compliance/active/
+                  |
+                  v
+          AgentGuard Instructions
+                  |
+                  v
+           Agent Session Starts
+                  |
+                  v
+          Active Rules Loaded
+                  |
+                  v
+           Agent Works on Task
+                  |
+                  v
+          File Edit / Write
+                  |
+                  v
+          Compliance Reminder
+                  |
+                  v
+          Agent Validates Changes
+                  |
+                  v
+          Compliance Check Reported
 ```
 
-The goal is simple: make project rules available at the right points in the development workflow.
+---
+
+## What's included?
+
+| Component | Purpose |
+|---|---|
+| `AGENTS.md` | Persistent instructions for AI coding agents |
+| `compliance/active/` | Stores currently applicable compliance rules |
+| `compliance/superseded/` | Stores rules that are no longer active |
+| `compliance/VERSION` | Tracks the compliance ruleset version |
+| `compliance/CHANGELOG.md` | Records changes to compliance rules |
+| `compliance/README.md` | Explains compliance rule management |
+| `.vibe/hooks.toml` | Configures Mistral Vibe lifecycle hooks |
+| `.vibe/hooks/` | Contains hook scripts |
+| `.vibe/skills/compliance/` | Contains the compliance management skill |
+
+The repository also includes `compliance-agent-writeup.txt`, which provides additional context about the framework.
 
 ---
 
 ## Getting started
 
-AgentGuard is designed to be added to an existing project.
+You don't need to create a new project to use AgentGuard.
 
-### Requirements
+You can add it to an existing project.
 
-For the included Vibe integration:
+### Prerequisites
 
-- [Mistral Vibe](https://github.com/mistralai/mistral-vibe)
-- Bash available in your environment.
-- A project folder trusted by Vibe so its project hooks can run.
+- Git
+- A code editor
+- An AI coding agent
+- Git Bash on Windows if using the included Bash hooks
+- Mistral Vibe for the included lifecycle-hook implementation
 
-On Windows, Git Bash can provide the Bash environment.
-
-### 1. Get AgentGuard
-
-Clone the repository:
+### 1. Clone the repository
 
 ```bash
 git clone https://github.com/AshleyMathias/AgentGuard.git
 ```
 
-### 2. Copy the required files
+### 2. Copy the framework into your project
 
-Copy these items from AgentGuard into your existing project's root directory:
+Copy these items into your existing project's root directory:
 
 ```text
 AGENTS.md
@@ -128,175 +142,162 @@ compliance/
 .vibe/
 ```
 
-Your project should look like:
+If your project already contains any of these files or directories, merge the contents carefully rather than overwriting your existing configuration.
+
+### 3. Add your compliance rules
+
+Navigate to:
 
 ```text
-your-project/
-│
-├── AGENTS.md
-│
-├── compliance/
-│   ├── active/
-│   ├── superseded/
-│   ├── VERSION
-│   ├── CHANGELOG.md
-│   └── README.md
-│
-└── .vibe/
-    ├── hooks.toml
-    ├── hooks/
-    │   ├── compliance-context.sh
-    │   └── edit-reminder.sh
-    └── skills/
-        └── compliance/
-            └── SKILL.md
+compliance/active/
 ```
 
-You can keep your existing project files and directories. AgentGuard does not require you to restructure your application.
+Create a Markdown file for your project rules.
 
-### 3. Trust the project
-
-Open the project in Vibe and accept its project trust prompt when asked.
-
-Project hooks require a trusted folder. Without that trust, automatic hook execution will not happen.
-
-### 4. Add your first ruleset
-
-Provide your coding agent with a document containing your project rules and say:
-
-```text
-Follow this. Add it to the active compliance rules.
-```
-
-The agent should:
-
-1. Save the document into `compliance/active/`.
-2. Update `compliance/VERSION`.
-3. Append an entry to `compliance/CHANGELOG.md`.
-
-Your rules are now stored in the project rather than existing only in the conversation.
-
----
-
-## Managing your rules
-
-AgentGuard includes a `/compliance` skill for Mistral Vibe.
-
-You can use:
-
-| Command | Purpose |
-|---|---|
-| `/compliance show` | Display the current version and active rulesets. |
-| `/compliance update` | Add or replace rules using a new document. |
-| `/compliance history` | View the rules change history. |
-
-### Example
-
-Suppose your project has these rules:
+For example:
 
 ```text
 compliance/
 ├── active/
-│   ├── security-policy.md
-│   └── coding-standards.md
-│
+│   ├── security.md
+│   ├── coding-standards.md
+│   └── architecture.md
 ├── superseded/
-│
 ├── VERSION
 ├── CHANGELOG.md
 └── README.md
 ```
 
-Later, your team updates its security policy.
+You can organize your rules according to your project's needs.
 
-Instead of overwriting the old document, AgentGuard's workflow archives the previous version, saves the new one, increments the version and records the change.
+### 4. Start your coding agent
 
-This gives you a traceable history of how your project rules evolve.
+Open your project using Mistral Vibe.
 
-**Important:** The user decides when rules change. The agent must not silently rewrite, replace or retire existing rules.
+The configured session-start hook loads the active compliance rules into the session context.
+
+After relevant file edits, the configured post-tool hook provides a compliance reminder.
+
+### 5. Verify the setup
+
+Check that:
+
+- Your project instructions are available.
+- Active compliance rules are loaded at session start.
+- The post-edit reminder runs after matching file operations.
+- The agent can reference and validate the applicable rules.
 
 ---
 
-## What happens when something goes wrong?
+## Understanding compliance rules
 
-AgentGuard is designed to avoid silently treating a broken ruleset as a valid one.
+Compliance rules should be clear, specific and actionable.
 
-The included Vibe hooks account for situations such as:
+Avoid vague instructions such as:
 
-- No compliance folder: no rules are injected.
-- Unreadable rules: a warning is provided.
-- Partially readable rules: readable files are loaded and skipped files are identified.
-- Oversized rulesets: file paths are provided so the agent can read the rules directly.
-- Invalid characters: control characters are handled before JSON output.
-- Hook failure: hooks fail open, allowing the session to continue.
+> Write secure code.
 
-The `AGENTS.md` instructions also act as a backstop, asking the agent to read and validate applicable rules before development output.
+Instead, write rules that describe the expected behaviour.
+
+For example:
+
+**Rule: Secret Management**
+
+```markdown
+# Secret Management
+
+## Requirements
+
+- Never hardcode API keys, passwords or access tokens.
+- Use environment variables for sensitive configuration.
+- Never commit .env files containing real credentials.
+- Do not expose secrets in logs or error messages.
+
+## Validation
+
+- Check modified files for accidentally exposed credentials.
+- Verify that sensitive configuration is loaded securely.
+```
+
+This makes it easier for an agent to understand what is expected and how to validate its work.
+
+You can create separate rule files for:
+
+- Security
+- Architecture
+- Coding standards
+- Data privacy
+- API design
+- Testing requirements
+- Project-specific conventions
+
+These are examples, not predefined policies shipped with AgentGuard.
+
+---
+
+## Versioning and rule management
+
+Compliance rules change as projects evolve.
+
+AgentGuard includes a simple structure for managing those changes.
+
+**Active rules**
+
+Rules currently applicable to the project belong in:
+
+```text
+compliance/active/
+```
+
+**Superseded rules**
+
+Rules that are no longer applicable can be moved into:
+
+```text
+compliance/superseded/
+```
+
+**Version tracking**
+
+The `VERSION` file tracks the compliance ruleset version.
+
+**Change history**
+
+`CHANGELOG.md` records changes to the ruleset.
+
+Keep these files updated whenever you modify the compliance rules.
+
+This helps developers understand which rules are currently applicable and how they have evolved.
 
 ---
 
 ## Compatibility
 
-AgentGuard separates its shared rules structure from tool-specific integrations.
+AgentGuard currently includes a working lifecycle-hook configuration for **Mistral Vibe**.
 
-The `AGENTS.md` and `compliance/` conventions can be adapted to different AI coding tools.
+The framework also uses `AGENTS.md` for persistent project instructions, which can be useful with coding agents that support this convention.
 
-However, automatic loading and lifecycle hooks depend on each tool's supported mechanisms.
+However, lifecycle hooks, configuration formats and instruction-loading behaviour differ between AI coding tools.
 
-| Tool | Current integration status |
-|---|---|
-| Mistral Vibe | Included hooks and compliance skill |
-| Claude Code | Adaptation required |
-| Cursor | Instruction-based adaptation required |
-| OpenCode | Plugin-based adaptation required |
-| Antigravity | Instruction-based adaptation required |
+Using the same files does not automatically make the Mistral Vibe hooks compatible with other agents.
 
-The integrations above are not interchangeable. The included `.vibe/` configuration is specifically for Mistral Vibe.
-
-Contributions for additional integrations are welcome.
+If you want to adapt AgentGuard to another coding agent, you will need to implement and test the equivalent lifecycle integration.
 
 ---
 
 ## Important limitations
 
-AgentGuard helps coding agents become aware of project rules. It does not independently guarantee that the resulting code is compliant.
+AgentGuard helps make project instructions more persistent and accessible. It does not independently enforce security or guarantee compliance.
 
-Keep in mind:
+Keep the following in mind:
 
-- Agents can still misunderstand or ignore instructions.
-- Lifecycle hooks are not a replacement for automated enforcement.
-- Hooks require the relevant tool configuration and permissions.
-- Instructions alone cannot prevent insecure code.
-- Critical requirements should also be enforced through tests, linters, security scanners and CI/CD checks.
+- An AI agent can still misunderstand or ignore instructions.
+- A compliance reminder does not prove that a change is compliant.
+- Hook execution depends on the configured environment.
+- Rules must be written, maintained and reviewed by humans.
+- Critical security requirements should also be enforced through automated tests, linters, CI/CD checks and appropriate security controls.
 
-**Think of AgentGuard as an instruction-awareness layer, not a compliance certification system.**
-
----
-
-## Project structure
-
-```text
-AgentGuard/
-│
-├── AGENTS.md
-├── LICENSE
-├── README.md
-│
-├── compliance/
-│   ├── active/
-│   ├── superseded/
-│   ├── VERSION
-│   ├── CHANGELOG.md
-│   └── README.md
-│
-└── .vibe/
-    ├── hooks.toml
-    ├── hooks/
-    │   ├── compliance-context.sh
-    │   └── edit-reminder.sh
-    └── skills/
-        └── compliance/
-            └── SKILL.md
-```
+**AgentGuard is an instruction-management and workflow-support layer, not a replacement for security enforcement.**
 
 ---
 
@@ -304,17 +305,18 @@ AgentGuard/
 
 AgentGuard is an open-source project, and contributions are welcome.
 
-You can help by:
+You can contribute by:
 
-- Testing AgentGuard in different coding environments.
-- Suggesting improvements to the existing workflow.
-- Reporting bugs and unexpected behaviour.
-- Building integrations for other AI coding tools.
-- Improving documentation and examples.
+- Improving documentation.
+- Suggesting better ways to manage persistent agent instructions.
+- Adding integrations for other coding agents.
+- Improving lifecycle hooks.
+- Sharing real-world use cases.
+- Reporting bugs and proposing enhancements.
 
-If you find something that could be better, open an issue or submit a pull request.
+If you have an idea that makes AI coding workflows more reliable, feel free to open an issue or submit a pull request.
 
-The goal is to keep AgentGuard lightweight, practical and accessible to developers.
+The goal is to make better AI development practices accessible to everyone.
 
 ---
 
@@ -322,12 +324,8 @@ The goal is to keep AgentGuard lightweight, practical and accessible to develope
 
 AgentGuard is released under the [MIT License](LICENSE).
 
-Free to use, modify and distribute.
+You are free to use, modify and distribute it according to the license terms.
 
 ---
 
-**Built to make project instructions more persistent, traceable and practical for AI-assisted development.**
-
-If you find AgentGuard useful, consider giving the repository a star and sharing it with other developers.
-
-[GitHub Repository](https://github.com/AshleyMathias/AgentGuard)
+**Built to make AI coding workflows more consistent, one project at a time.**
