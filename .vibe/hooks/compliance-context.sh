@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
-# session_start hook: inject active compliance rules + rules version into the
-# agent's context. Layout: compliance/active/*.md is the versioned home;
-# compliance/*.md (flat, older template copies) is still honored. README.md,
-# superseded/ and the *.md metadata files are never injected.
+# session_start hook: inject active compliance rules + version into the agent context.
+# Only readable Markdown files directly inside compliance/active/ are active rulesets.
+# README.md, CHANGELOG.md and superseded rulesets are never injected.
 # Defensive behavior as before: no folder -> silent; nothing readable ->
 # warning into context; some files unreadable -> named in the context; control
 # bytes stripped before JSON encoding; always exit 0 (fail open).
@@ -21,20 +20,24 @@ if [ ! -d "$rules_dir" ]; then
   exit 0
 fi
 
-# A file is an injectable ruleset only if it is a readable regular *.md,
-# not README, not under superseded/. Searches the versioned active/ dir and
-# the legacy flat layout.
+# Collect readable Markdown rulesets from the active directory only.
 collect_from() {
   local dir="$1"
   [ -d "$dir" ] || return 0
   local f base
+
   for f in "$dir"/*.md; do
     [ -e "$f" ] || continue
     base=$(basename "$f")
-    [ "$base" = "README.md" ] && continue
+
+    case "$base" in
+      README.md|CHANGELOG.md) continue ;;
+    esac
+
     if [ -f "$f" ] && [ -r "$f" ]; then
       files+=("$f")
       body+="=== RULESET FILE: $f ==="
+      body+=$'\n'
       body+="$(tr -d '\r' < "$f" 2>/dev/null || printf '%s' "[unrecoverable read error]")"
       body+=$'\n'
     else
@@ -42,13 +45,7 @@ collect_from() {
     fi
   done
 }
-
 collect_from "$active_dir"
-collect_from "$rules_dir"
-
-if [ "${#files[@]}" -eq 0 ] && [ "${#skipped[@]}" -eq 0 ]; then
-  exit 0
-fi
 
 skip_note=""
 if [ "${#skipped[@]}" -gt 0 ]; then
@@ -65,10 +62,14 @@ elif [ -e "compliance/VERSION" ]; then
 "
 fi
 
-if [ "${#files[@]}" -eq 0 ]; then
-  context="${version_line}ACTIVE COMPLIANCE FOLDER FOUND BUT NO READABLE RULESETS. Per this project's instructions you must validate development output against the rulesets in compliance/active/. They could not be read automatically; read them directly, and flag the problem to the user before proceeding.
+if [ "${#files[@]}" -eq 0 ] && [ "${#skipped[@]}" -gt 0 ]; then
+  context="${version_line}ACTIVE COMPLIANCE RULESETS COULD NOT BE READ. Read the files directly and flag the problem to the user before proceeding.
 
 $skip_note"
+elif [ "${#files[@]}" -eq 0 ]; then
+  context="${version_line}NO ACTIVE COMPLIANCE RULESETS. The compliance folder is initialized, but no rulesets are currently active. Follow the project's general instructions and inform the user that no active rulesets are configured.
+
+"
 elif [ "${#body}" -le "$max_bytes" ]; then
   context="${version_line}ACTIVE COMPLIANCE RULESETS (injected by the compliance hook). These rules govern this session. Re-read the files in compliance/active/ before any development output, validate your work against them, and end dev answers with a Compliance check section naming the rules version.
 
@@ -93,7 +94,6 @@ fi
 #   3. escape backslash, quote and tab.
 escaped=$(printf '%s' "$context" |
   tr -d '\000-\010\013\014\016-\037' |
-  sed ':a;N;$!ba;s/\n/\\n/g' |
-  sed -e 's/\\/\\\\/g' -e 's/"/\\"/g' -e 's/\t/\\t/g')
-
+  sed -e 's/\\/\\\\/g' -e 's/"/\\"/g' -e 's/\t/\\t/g' |
+  sed ':a;N;$!ba;s/\n/\\n/g')
 printf '{"hook_specific_output": {"additional_context": "%s"}}\n' "$escaped"
