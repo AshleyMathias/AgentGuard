@@ -10,7 +10,7 @@ Instead of relying entirely on an agent to remember instructions from previous c
 
 **No external services. No database. No API keys. Just files, instructions and lifecycle hooks.**
 
-[Getting Started](#getting-started) · [How It Works](#how-it-works) · [Contributing](#contributing)
+[Getting Started](#getting-started) · [How It Works](#how-agentguard-works) · [Contributing](#contributing)
 
 ---
 
@@ -62,33 +62,33 @@ The intention is simple: make project rules available at the right moments in th
 ## The workflow
 
 ```text
-        Project Compliance Rules
-                  |
-                  v
-          compliance/active/
-                  |
-                  v
+         Project Compliance Rules
+                   |
+                   v
+           compliance/active/
+                   |
+                   v
           AgentGuard Instructions
-                  |
-                  v
+                   |
+                   v
            Agent Session Starts
-                  |
-                  v
+                   |
+                   v
           Active Rules Loaded
-                  |
-                  v
+                   |
+                   v
            Agent Works on Task
-                  |
-                  v
+                   |
+                   v
           File Edit / Write
-                  |
-                  v
+                   |
+                   v
           Compliance Reminder
-                  |
-                  v
+                   |
+                   v
           Agent Validates Changes
-                  |
-                  v
+                   |
+                   v
           Compliance Check Reported
 ```
 
@@ -124,7 +124,7 @@ You can add it to an existing project.
 - A code editor
 - An AI coding agent
 - Git Bash on Windows if using the included Bash hooks
-- Mistral Vibe for the included lifecycle-hook implementation
+- Mistral Vibe for the included lifecycle-hook and compliance-skill implementation
 
 ### 1. Clone the repository
 
@@ -144,7 +144,17 @@ compliance/
 
 If your project already contains any of these files or directories, merge the contents carefully rather than overwriting your existing configuration.
 
-### 3. Add your compliance rules
+Pay particular attention to `.vibe/hooks.toml`. If your project already has hook configurations, merge the AgentGuard entries into the existing configuration instead of replacing it.
+
+### 3. Open and trust your project
+
+Open your destination project in Mistral Vibe.
+
+Review the project's instructions and hook configuration. If Mistral Vibe asks you to trust the project before enabling its hooks, review the commands and approve only if you trust the project contents.
+
+The included hooks execute local Bash scripts from the project directory.
+
+### 4. Add your compliance rules
 
 Navigate to:
 
@@ -168,9 +178,11 @@ compliance/
 └── README.md
 ```
 
+Every Markdown file directly inside `compliance/active/` is treated as an active ruleset.
+
 You can organize your rules according to your project's needs.
 
-### 4. Start your coding agent
+### 5. Start your coding agent
 
 Open your project using Mistral Vibe.
 
@@ -178,7 +190,7 @@ The configured session-start hook loads the active compliance rules into the ses
 
 After relevant file edits, the configured post-tool hook provides a compliance reminder.
 
-### 5. Verify the setup
+### 6. Verify the setup
 
 Check that:
 
@@ -249,13 +261,17 @@ Rules currently applicable to the project belong in:
 compliance/active/
 ```
 
+Only Markdown files directly inside this directory are treated as active rulesets.
+
 **Superseded rules**
 
-Rules that are no longer applicable can be moved into:
+Rules that are no longer applicable are archived in:
 
 ```text
 compliance/superseded/
 ```
+
+Previous versions are retained rather than deleted.
 
 **Version tracking**
 
@@ -263,9 +279,28 @@ The `VERSION` file tracks the compliance ruleset version.
 
 **Change history**
 
-`CHANGELOG.md` records changes to the ruleset.
+`CHANGELOG.md` records changes to the ruleset. It serves as an append-only history of compliance updates.
 
-Keep these files updated whenever you modify the compliance rules.
+### Managing compliance rules
+
+The included `/compliance` skill provides three commands:
+
+| Command | Purpose |
+|---|---|
+| `/compliance show` | Displays the current version and active rulesets |
+| `/compliance update` | Imports or replaces user-provided compliance rules |
+| `/compliance history` | Displays the compliance change history |
+
+When you use `/compliance update`, the workflow:
+
+1. Saves the new ruleset in `compliance/active/`.
+2. Archives a replaced ruleset in `compliance/superseded/`.
+3. Increments the compliance version.
+4. Appends an entry to `compliance/CHANGELOG.md`.
+
+Multiple documents provided in one update are handled as a single version change.
+
+**Only the user decides when compliance rules should change.** The agent must not independently rewrite, replace or retire existing rulesets.
 
 This helps developers understand which rules are currently applicable and how they have evolved.
 
@@ -273,11 +308,20 @@ This helps developers understand which rules are currently applicable and how th
 
 ## Compatibility
 
-AgentGuard currently includes a working lifecycle-hook configuration for **Mistral Vibe**.
+AgentGuard currently includes a working lifecycle-hook configuration and compliance management skill for **Mistral Vibe**.
 
 The framework also uses `AGENTS.md` for persistent project instructions, which can be useful with coding agents that support this convention.
 
-However, lifecycle hooks, configuration formats and instruction-loading behaviour differ between AI coding tools.
+The different components have different compatibility requirements:
+
+| Component | Compatibility |
+|---|---|
+| `AGENTS.md` | Coding agents that support this convention |
+| Compliance directory | Tool-independent |
+| Bash lifecycle hooks | Configured and tested for Mistral Vibe |
+| Compliance management skill | Configured for Mistral Vibe |
+
+Lifecycle hooks, configuration formats and instruction-loading behaviour differ between AI coding tools.
 
 Using the same files does not automatically make the Mistral Vibe hooks compatible with other agents.
 
