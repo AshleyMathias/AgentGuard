@@ -1,8 +1,8 @@
 # Project hooks: compliance-first workflow.
 # Loaded automatically because this folder is trusted by Vibe.
 
-# Injects the active rulesets (compliance/*.md) into the agent's context every
-# time a session opens, so development work always starts with the rules loaded.
+# Injects active rulesets from compliance/active/ into the agent's context
+# every time a session opens.
 [[hooks]]
 name = "compliance-load-rules"
 type = "session_start"
@@ -10,8 +10,8 @@ command = "bash .vibe/hooks/compliance-context.sh"
 timeout = 30.0
 description = "Inject active compliance rules into the session context"
 
-# After every file write/edit, nudge the agent to verify the change against the
-# rules and remember to include its Compliance check in the final answer.
+# After relevant file writes or edits, remind the agent to verify changes
+# against the active compliance rulesets.
 [[hooks]]
 name = "compliance-edit-reminder"
 type = "post_tool"
